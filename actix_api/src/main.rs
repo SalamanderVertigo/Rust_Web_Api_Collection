@@ -1,5 +1,7 @@
 use actix_web::{get, post, web, App, HttpResponse, HttpServer, Responder};
 use std::sync::Mutex;
+mod users_controllers;
+mod config;
 
 #[get("/")]
 async fn hello() -> impl Responder {
@@ -39,26 +41,26 @@ async fn state_with_counter(data: web::Data<AppstateWithCounter>) -> String {
 
 
 // this function could be located in a different module
-fn scoped_config(cfg: &mut web::ServiceConfig) {
-    cfg.service(
-        web::resource("/test")
-            .route(web::get().to(|| HttpResponse::Ok().body("test")))
-            .route(web::head().to(|| HttpResponse::MethodNotAllowed())),
-    );
-}
+// fn scoped_config(cfg: &mut web::ServiceConfig) {
+//     cfg.service(
+//         web::resource("/test")
+//             .route(web::get().to(|| HttpResponse::Ok().body("test")))
+//             .route(web::head().to(|| HttpResponse::MethodNotAllowed())),
+//     );
+// }
 
 // this function could be located in a different module
-fn config(cfg: &mut web::ServiceConfig) {
-    cfg.service(
-        web::resource("/users")
-            .route(web::get().to(|| HttpResponse::Ok().body("Users")))
-            .route(web::head().to(|| HttpResponse::MethodNotAllowed())),
-    );
-    cfg.service(
-        web::resource("/stuff")
-            .route(web::get().to(|| HttpResponse::Ok().body("Stuff")))
-    );
-}
+// fn config(cfg: &mut web::ServiceConfig) {
+//     cfg.service(
+//         web::resource("/users")
+//             .route(web::get().to(|| HttpResponse::Ok().body("Users")))
+//             .route(web::head().to(|| HttpResponse::MethodNotAllowed())),
+//     );
+//     cfg.service(
+//         web::resource("/stuff")
+//             .route(web::get().to(|| HttpResponse::Ok().body("Stuff")))
+//     );
+// }
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -69,7 +71,7 @@ async fn main() -> std::io::Result<()> {
 
     HttpServer::new(move || {
         App::new()
-        .configure(config)
+            .configure(config::config)
             .data(AppState {
                 app_name: String::from("Actix-web-api"),
             })
@@ -77,9 +79,14 @@ async fn main() -> std::io::Result<()> {
             .service(hello)
             .service(echo)
             .service(index)
-            .service(web::scope("/users").configure(scoped_config))
+            .service(users_controllers::get_user)
+            .service(web::scope("/api").configure(users_controllers::user_routes)) // found in another file, create custome routes this way too
             .route("/hey", web::get().to(manual_hello))
             .route("/app_state_counter", web::get().to(state_with_counter))
+            // .service(web::resource("/uses_container/")
+            //     .route(web::get().to(users_controllers::get_user))
+                // .route(web::post().to(post_handler))
+                // .route(web::delete().to(delete_handler)))
     })
     .bind("127.0.0.1:8080")?
     .run()
