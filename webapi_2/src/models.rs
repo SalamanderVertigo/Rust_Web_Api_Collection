@@ -29,7 +29,7 @@ impl Responder for User {
 impl User {
     pub async fn create(user: User, pool: &PgPool) -> Result<User> {
         let mut tx = pool.begin().await?;
-        let user = sqlx::query("INSERT INTO users (first_name, last_name, user_name) VALUES ($1, $2, $3, $4) RETURNING id, first_name, last_name, user_name")
+        let user = sqlx::query("INSERT INTO users (id, first_name, last_name, user_name) VALUES ($1, $2, $3, $4) RETURNING id, first_name, last_name, user_name")
             .bind(&user.id)
             .bind(&user.first_name)
             .bind(&user.last_name)

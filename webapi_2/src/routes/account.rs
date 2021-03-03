@@ -4,8 +4,8 @@ use sqlx::PgPool;
 
 #[post("/create")]
 async fn create(user: web::Json<User>, db_pool: web::Data<PgPool>,) -> impl Responder {
-    println!("Create new user Controller, {:?}", user);
     let result = User::create(user.into_inner(), db_pool.get_ref()).await;
+    println!("Result: {:?}", result);
     match result {
         Ok(user) => HttpResponse::Ok().json(user),
         _ => HttpResponse::BadRequest().body("Error trying to create new user"),
