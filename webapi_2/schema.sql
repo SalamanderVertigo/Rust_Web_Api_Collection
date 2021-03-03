@@ -1,6 +1,8 @@
   
-CREATE TABLE IF NOT EXISTS todos (
-    id          SERIAL PRIMARY KEY,
-    description TEXT NOT NULL,
-    done        BOOLEAN NOT NULL DEFAULT FALSE
+CREATE TABLE IF NOT EXISTS Users (
+    id         SERIAL PRIMARY KEY,
+    first_name TEXT,
+    last_name  TEXT,
+    user_name  TEXT,
+
 );

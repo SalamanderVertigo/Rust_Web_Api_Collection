@@ -1,14 +1,6 @@
 use actix_web::web;
-
-use crate::handlers::{account};
+use crate::routes::{account_init};
 
 pub fn config_app(cfg: &mut web::ServiceConfig) {
-    cfg.service(
-        web::scope("/account")
-            .service(
-                web::resource("")
-                    .route(web::get().to(account::get_user))
-                    .route(web::put().to(account::update_account))
-            )
-    );   
+    cfg.service(web::scope("/account").configure(account_init));   
 }

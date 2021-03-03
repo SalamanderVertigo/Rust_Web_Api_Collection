@@ -2693,6 +2693,7 @@ dependencies = [
  "env_logger",
  "futures",
  "listenfd",
+ "log",
  "serde",
  "serde_json",
  "sqlx",
