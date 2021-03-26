@@ -6,6 +6,8 @@ use anyhow::Result;
 use sqlx::postgres::PgRow;
 use sqlx::{FromRow, PgPool, Row, types::Uuid};
 
+use jsonwebtoken::{encode, Header, Algorithm, EncodingKey};
+
 // Struct to represent database record
 #[derive(Debug, Deserialize, Serialize, FromRow)]
 pub struct User {
@@ -79,8 +81,6 @@ impl InternalUser {
         let salt = b"randomsalt";
         let config = Config::default();
         let hash = argon2::hash_encoded(password, salt, &config).unwrap();
-        // let matches = argon2::verify_encoded(&hash, password).unwrap();
-        // assert!(matches);
         let user = sqlx::query("INSERT INTO users (first_name, last_name, user_name, password) VALUES ($1, $2, $3, $4) RETURNING id, first_name, last_name, user_name")
             .bind(&new_user.first_name)
             .bind(&new_user.last_name)
@@ -106,7 +106,7 @@ impl InternalUser {
  }
 
  impl VerifyUser {
-    pub async fn login(pool: &PgPool, verify_user: VerifyUser) -> Result<bool> {
+    pub async fn login(pool: &PgPool, verify_user: VerifyUser) -> Result<String> {
         let mut tx = pool.begin().await?;
         let user = sqlx::query("SELECT * FROM users WHERE user_name = $1")
             .bind(&verify_user.user_name)
@@ -125,7 +125,38 @@ impl InternalUser {
         
         // implement the jwt token and seesioning in handler
         let matches = argon2::verify_encoded(&user.password, &verify_user.password.as_bytes()).unwrap();
-        Ok(matches)
+        if matches { 
+            // jwt token goes here
+            let key = b"my_secret";
+            let mut header = Header::default();
+            header.kid = Some("singing_key".to_owned());
+            header.alg = Algorithm::HS512;
+
+            let token = match encode(&header, &user, &EncodingKey::from_secret(key)) {
+                Ok(t) => t,
+                Err(_) => panic!(), // in practice you would return the error
+            };
+            println!("Token: {:?}", token);
+
+            // // decoding
+            // let token_data = match decode::<User>(
+            //     &token, 
+            //     &DecodingKey::from_secret(key), 
+            //     &Validation::new(Algorithm::HS512)
+            // ) {
+            //     Ok(c) => c,
+            //     Err(err) => match *err.kind() {
+            //         ErrorKind::InvalidToken => panic!(), // handle specific error here
+            //         _ => panic!(),
+            //     },
+            // };
+            // println!("Token Data Claims: {:?}", token_data.claims);
+            // println!("Token Data Header: {:?}", token_data.header);
+
+            Ok(String::from("Login: Success"))
+        } else { 
+            Ok(String::from("Login: Failure"))
+        }   
     }
  }
 
