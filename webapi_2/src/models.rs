@@ -33,6 +33,11 @@ pub struct VerifyUser {
     pub password: String,
 }
 
+#[derive(Debug, Deserialize, Serialize, FromRow)]
+pub struct Token {
+    pub jwt: String
+}
+
 
 impl Responder for User {
     type Error = Error;
@@ -76,7 +81,7 @@ impl Responder for VerifyUser {
 // any methods needed for new user strucs here (new user omits id as it's generated in the db)
 impl InternalUser {
     pub async fn create(new_user: InternalUser, pool: &PgPool) -> Result<User> {
-        let mut tx = pool.begin().await?;
+        let mut tx = pool.begin().await.unwrap();
         let password = new_user.password.as_bytes();
         let salt = b"randomsalt";
         let config = Config::default();
@@ -106,8 +111,8 @@ impl InternalUser {
  }
 
  impl VerifyUser {
-    pub async fn login(pool: &PgPool, verify_user: VerifyUser) -> Result<String> {
-        let mut tx = pool.begin().await?;
+    pub async fn login(pool: &PgPool, verify_user: VerifyUser) -> Result<Token, String> {
+        let mut tx = pool.begin().await.unwrap();
         let user = sqlx::query("SELECT * FROM users WHERE user_name = $1")
             .bind(&verify_user.user_name)
             .map(|row: PgRow| {
@@ -117,7 +122,7 @@ impl InternalUser {
                 } 
             })
             .fetch_one(&mut tx)
-            .await?;
+            .await.unwrap();
 
         tx.commit()
         .await
@@ -133,7 +138,7 @@ impl InternalUser {
             header.alg = Algorithm::HS512;
 
             let token = match encode(&header, &user, &EncodingKey::from_secret(key)) {
-                Ok(t) => t,
+                Ok(t) =>  t,
                 Err(_) => panic!(), // in practice you would return the error
             };
             println!("Token: {:?}", token);
@@ -153,9 +158,9 @@ impl InternalUser {
             // println!("Token Data Claims: {:?}", token_data.claims);
             // println!("Token Data Header: {:?}", token_data.header);
 
-            Ok(String::from("Login: Success"))
+            Ok(Token {jwt: token})
         } else { 
-            Ok(String::from("Login: Failure"))
+            Err(String::from("Login: Failure"))
         }   
     }
  }
