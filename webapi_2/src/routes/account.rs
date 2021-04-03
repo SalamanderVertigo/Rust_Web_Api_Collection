@@ -4,8 +4,8 @@ use sqlx::PgPool;
 use uuid::Uuid;
 
 
-#[post("/create")]
-async fn create(new_user: web::Json<InternalUser>, db_pool: web::Data<PgPool>,) -> impl Responder {
+#[post("/register")]
+async fn register(new_user: web::Json<InternalUser>, db_pool: web::Data<PgPool>,) -> impl Responder {
     let result = InternalUser::create(new_user.into_inner(), db_pool.get_ref()).await;
     match result {
         Ok(user) => HttpResponse::Ok().json(user),
@@ -41,7 +41,7 @@ async fn account_test() -> impl Responder {
 }
 
 pub fn account_init(cfg: &mut web::ServiceConfig) {
-    cfg.service(create);
+    cfg.service(register);
     cfg.service(get);
     cfg.service(login);
     cfg.service(account_test);

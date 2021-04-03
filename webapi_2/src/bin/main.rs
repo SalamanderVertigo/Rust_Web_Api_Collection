@@ -1,6 +1,6 @@
 #[macro_use]
 extern crate log;
-use actix_web::{App, HttpServer, Responder, HttpResponse, web};
+use actix_web::{App, HttpServer, Responder, HttpResponse, web, middleware,};
 use anyhow::Result;
 use dotenv::dotenv;
 use listenfd::ListenFd;
@@ -29,6 +29,7 @@ async fn main() -> Result<()> {
 
     let mut server = HttpServer::new(move || {
         App::new()
+            .wrap(middleware::Logger::default())
             .data(db_pool.clone()) // pass database pool to application so we can access it inside handlers
             .route("/", web::get().to(index))
             .configure(config_app)

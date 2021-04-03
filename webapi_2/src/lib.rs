@@ -3,6 +3,7 @@ pub mod appconfig;
 pub mod models;
 pub mod routes;
 pub mod functions;
+pub mod auth;
 
 
 
