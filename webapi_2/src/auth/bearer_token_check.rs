@@ -2,10 +2,10 @@ use actix_web_httpauth::extractors::bearer::{BearerAuth, Config};
 use actix_web_httpauth::extractors::AuthenticationError;
 use actix_web::{Error, dev::ServiceRequest};
 
-async fn bearer_token_check(req: ServiceRequest, credentials: BearerAuth) -> Result<ServiceRequest, Error> {
+pub async fn bearer_token_check(req: ServiceRequest, credentials: BearerAuth) -> Result<ServiceRequest, Error> {
     let config = req
         .app_data::<Config>()
-        .map(|data| data.get_ref().clone())
+        .map(|data| data.clone()) // had to remove the .get_ref() from data to work
         .unwrap_or_else(Default::default);
     match validate_token(credentials.token()) {
         Ok(res) => {
