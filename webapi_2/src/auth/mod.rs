@@ -1,3 +1,3 @@
-pub mod bearer_token_check;
+pub mod auth;
 
-pub use bearer_token_check::bearer_token_check;
+pub use auth::{bearer_token_check, create_jwt};

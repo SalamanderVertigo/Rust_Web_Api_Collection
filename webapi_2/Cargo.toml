@@ -21,3 +21,4 @@ sqlx = { version = "0.3", features = [ "postgres", "uuid" ] }
 rust-argon2 = "0.8"
 uuid = { version = "0.8", features = ["serde", "v4"] }
 jsonwebtoken = "7"
+chrono = "0.4"

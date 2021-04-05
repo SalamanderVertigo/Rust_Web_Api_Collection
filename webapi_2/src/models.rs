@@ -5,8 +5,8 @@ use futures::future::{ready, Ready};
 use anyhow::Result;
 use sqlx::postgres::PgRow;
 use sqlx::{FromRow, PgPool, Row, types::Uuid};
+use crate::auth;
 
-use jsonwebtoken::{encode, Header, Algorithm, EncodingKey};
 
 // Struct to represent database record
 #[derive(Debug, Deserialize, Serialize, FromRow)]
@@ -28,14 +28,21 @@ pub struct InternalUser {
 
 // struct to verify user credentials
 #[derive(Debug, Deserialize, Serialize, FromRow)]
-pub struct VerifyUser {
+pub struct LoginRequest {
     pub user_name: String,
     pub password: String,
 }
 
 #[derive(Debug, Deserialize, Serialize, FromRow)]
-pub struct Token {
+pub struct LoginResponse {
     pub jwt: String
+}
+
+// claims struct is where we store the info of the token we need to validate over the api
+#[derive(Debug, Deserialize, Serialize)]
+pub struct Claims {
+    pub sub: Uuid, // subject, or the thing being validated, like a users uuid
+    pub exp: usize, // expiration of the token
 }
 
 
@@ -65,7 +72,7 @@ impl Responder for InternalUser {
     }
 }
 
-impl Responder for VerifyUser {
+impl Responder for LoginRequest {
     type Error = Error;
     type Future = Ready<Result<HttpResponse, Error>>;
 
@@ -108,15 +115,15 @@ impl InternalUser {
         .unwrap();
         Ok(user)
     }   
- }
+}
 
- impl VerifyUser {
-    pub async fn login(pool: &PgPool, verify_user: VerifyUser) -> Result<Token, String> {
+impl LoginRequest {
+    pub async fn login(pool: &PgPool, verify_user: LoginRequest) -> Result<LoginResponse, String> {
         let mut tx = pool.begin().await.unwrap();
-        let user = sqlx::query("SELECT * FROM users WHERE user_name = $1")
+        let db_verify_user = sqlx::query("SELECT * FROM users WHERE user_name = $1")
             .bind(&verify_user.user_name)
             .map(|row: PgRow| {
-                VerifyUser { 
+                LoginRequest { 
                     user_name: row.get("user_name"),    
                     password: row.get("password")
                 } 
@@ -129,44 +136,41 @@ impl InternalUser {
         .unwrap();
         
         // implement the jwt token and seesioning in handler
-        let matches = argon2::verify_encoded(&user.password, &verify_user.password.as_bytes()).unwrap();
+        // TODO: Once verified login is correct, need to get the USER type from db and encode that info.
+        let matches = argon2::verify_encoded(&db_verify_user.password, &verify_user.password.as_bytes()).unwrap();
+
         if matches { 
-            // jwt token goes here
-            let key = b"my_secret";
-            let mut header = Header::default();
-            header.kid = Some("singing_key".to_owned());
-            header.alg = Algorithm::HS512;
+            let mut tx = pool.begin().await.unwrap();
+            let db_user = sqlx::query("SELECT * FROM users WHERE user_name = $1")
+                .bind(&verify_user.user_name)
+                .map(|row: PgRow| {
+                    User { 
+                        id: row.get("id"),
+                        first_name: row.get("first_name"),
+                        last_name: row.get("last_name"),
+                        user_name: row.get("user_name"),    
+                        
+                    } 
+                })
+                .fetch_one(&mut tx)
+                .await.unwrap();
 
-            let token = match encode(&header, &user, &EncodingKey::from_secret(key)) {
-                Ok(t) =>  t,
-                Err(_) => panic!(), // in practice you would return the error
-            };
-            println!("Token: {:?}", token);
+            tx.commit()
+            .await
+            .unwrap();
+        
+            // let key =  env::var("SECRET").expect("SECRET not in env file"); //b"my_secret";
+            // let u8_key = key.as_bytes();
+            return auth::create_jwt(&db_user.id)
 
-            // // decoding
-            // let token_data = match decode::<User>(
-            //     &token, 
-            //     &DecodingKey::from_secret(key), 
-            //     &Validation::new(Algorithm::HS512)
-            // ) {
-            //     Ok(c) => c,
-            //     Err(err) => match *err.kind() {
-            //         ErrorKind::InvalidToken => panic!(), // handle specific error here
-            //         _ => panic!(),
-            //     },
-            // };
-            // println!("Token Data Claims: {:?}", token_data.claims);
-            // println!("Token Data Header: {:?}", token_data.header);
-
-            Ok(Token {jwt: token})
         } else { 
             Err(String::from("Login: Failure"))
         }   
     }
- }
+}
 
  // any methoods needed for user struct, user struct omits password as it's not needed to be served up. 
- impl User {
+impl User {
     pub async fn get(pool: &PgPool, id: Uuid) -> Result<User> {
         let mut tx = pool.begin().await?;
         let res = sqlx::query("SELECT * FROM users WHERE id = $1")
@@ -185,4 +189,4 @@ impl InternalUser {
         tx.commit().await?;
         Ok(res)
     }
- }
+}
