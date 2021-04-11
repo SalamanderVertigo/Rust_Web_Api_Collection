@@ -7,7 +7,6 @@ use sqlx::postgres::PgRow;
 use sqlx::{FromRow, PgPool, Row, types::Uuid};
 use crate::auth;
 
-
 // Struct to represent database record
 #[derive(Debug, Deserialize, Serialize, FromRow)]
 pub struct User {
@@ -37,14 +36,6 @@ pub struct LoginRequest {
 pub struct LoginResponse {
     pub jwt: String
 }
-
-// claims struct is where we store the info of the token we need to validate over the api
-#[derive(Debug, Deserialize, Serialize)]
-pub struct Claims {
-    pub sub: Uuid, // subject, or the thing being validated, like a users uuid
-    pub exp: usize, // expiration of the token
-}
-
 
 impl Responder for User {
     type Error = Error;
@@ -135,8 +126,6 @@ impl LoginRequest {
         .await
         .unwrap();
         
-        // implement the jwt token and seesioning in handler
-        // TODO: Once verified login is correct, need to get the USER type from db and encode that info.
         let matches = argon2::verify_encoded(&db_verify_user.password, &verify_user.password.as_bytes()).unwrap();
 
         if matches { 

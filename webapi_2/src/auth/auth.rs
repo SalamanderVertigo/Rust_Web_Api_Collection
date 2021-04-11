@@ -3,12 +3,14 @@ use actix_web_httpauth::extractors::AuthenticationError;
 use actix_web::{Error, dev::ServiceRequest};
 use jsonwebtoken::errors::ErrorKind;
 use jsonwebtoken::{encode, decode, Header, Algorithm, DecodingKey, Validation, EncodingKey};
-use crate::models::{Claims, LoginResponse};
+use crate::models::account_model::{LoginResponse};
+use crate::models::claims_model::{Claims, Role};
 use sqlx::{types::Uuid};
 use chrono::prelude::*;
 
 // const key: String = env::var("SIGNING_KEY").expect("SECRET not in env file");
 // const u8_key: &[u8] = key.as_bytes();
+// move to env file and convert to bytes
 const JWT_SECRET: &[u8] = b"secret";
 
 // create the jwt in here, UUID may need to be changed from &str to Uuid type
@@ -24,13 +26,14 @@ pub fn create_jwt(uuid: &Uuid) -> Result<LoginResponse, String> {
 
     let claims = Claims {
         sub: uuid.to_owned(),
+        role: Role::Admin,
         exp: expiration as usize,
     };
 
     // set up headers!!
     let token = match encode(&header, &claims, &EncodingKey::from_secret(JWT_SECRET)) {
         Ok(t) =>  t,
-        Err(_) => panic!("Error creating the token"), // in practice you would return the error
+        Err(_) => panic!("Error creating the token"), 
     };
     
     Ok(LoginResponse{jwt: token})
