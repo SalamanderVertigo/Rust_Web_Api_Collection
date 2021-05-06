@@ -91,10 +91,10 @@ impl InternalUser {
             .bind(&hash)
             .map(|row: PgRow| {
                 User { 
-                    id: row.get(0),
-                    first_name: row.get(1),
-                    last_name: row.get(2),
-                    user_name: row.get(3),
+                    id: row.get("id"),
+                    first_name: row.get("first_name"),
+                    last_name: row.get("last_name"),
+                    user_name: row.get("user_name"),
                 }
             })
             .fetch_one(&mut tx)
