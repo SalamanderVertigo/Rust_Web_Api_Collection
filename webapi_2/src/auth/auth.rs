@@ -57,8 +57,7 @@ pub async fn bearer_token_check(req: ServiceRequest, credentials: BearerAuth) ->
     }
 }
 
-fn validate_token(token: &str) -> Result<bool, std::io::Error>
-{
+fn validate_token(token: &str) -> Result<bool, std::io::Error> {
     let token_data = match decode::<Claims>(
         &token.to_string(),
         &DecodingKey::from_secret(JWT_SECRET),
