@@ -21,6 +21,11 @@ async fn login(db_pool: web::Data<PgPool>, verify_user: web::Json<LoginRequest>)
     }
 }
 
+// #[post("/logout")]
+// async fn logout() {
+// 
+// }
+
 #[get("/register-signin-test")]
 async fn signup_signin_test() -> impl Responder {
     HttpResponse::Ok().body(r#"

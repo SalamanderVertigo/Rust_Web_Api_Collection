@@ -158,7 +158,7 @@ impl LoginRequest {
     }
 }
 
- // any methoods needed for user struct, user struct omits password as it's not needed to be served up. 
+ // any methods needed for user struct, user struct omits password as it's not needed to be served up.
 impl User {
     pub async fn get(pool: &PgPool, id: Uuid) -> Result<User> {
         let mut tx = pool.begin().await?;
