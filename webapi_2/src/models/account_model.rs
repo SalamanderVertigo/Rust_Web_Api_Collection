@@ -1,7 +1,6 @@
-use actix_web::{Responder, Error, HttpRequest, HttpResponse};
+use actix_web::{Responder, HttpRequest, HttpResponse, body::BoxBody};
 use argon2::{self, Config};
 use serde::{Deserialize, Serialize };
-use futures::future::{ready, Ready};
 use anyhow::Result;
 use sqlx::postgres::PgRow;
 use sqlx::{FromRow, PgPool, Row, types::Uuid};
@@ -38,45 +37,40 @@ pub struct LoginResponse {
 }
 
 impl Responder for User {
-    type Error = Error;
-    type Future = Ready<Result<HttpResponse, Error>>;
+    type Body = BoxBody;
+    /*type Future = Ready<Result<HttpResponse, Error>>;*/
 
-    fn respond_to(self, _req: &HttpRequest) -> Self::Future {
+    fn respond_to(self, _req: &HttpRequest) -> HttpResponse {
         let body = serde_json::to_string(&self).unwrap();
-        ready(Ok(HttpResponse::Ok()
+        HttpResponse::Ok()
             .content_type("application/json")
-            .body(body))
-        )
+            .body(body)
     }
 }
 
 impl Responder for InternalUser {
-    type Error = Error;
-    type Future = Ready<Result<HttpResponse, Error>>;
+    type Body = BoxBody;
 
-    fn respond_to(self, _req: &HttpRequest) -> Self::Future {
+    fn respond_to(self, _req: &HttpRequest) -> HttpResponse {
         let body = serde_json::to_string(&self).unwrap();
-        ready(Ok(HttpResponse::Ok()
+        HttpResponse::Ok()
             .content_type("application/json")
-            .body(body))
-        )
+            .body(body)
     }
 }
 
 impl Responder for LoginRequest {
-    type Error = Error;
-    type Future = Ready<Result<HttpResponse, Error>>;
+    type Body = BoxBody;
 
-    fn respond_to(self, _req: &HttpRequest) -> Self::Future {
+    fn respond_to(self, _req: &HttpRequest) -> HttpResponse {
         let body = serde_json::to_string(&self).unwrap();
-        ready(Ok(HttpResponse::Ok()
+        HttpResponse::Ok()
             .content_type("application/json")
-            .body(body))
-        )
+            .body(body)
     }
 }
 
-// any methods needed for new user strucs here (new user omits id as it's generated in the db)
+// any methods needed for new user structs here (new user omits id as it's generated in the db)
 impl InternalUser {
     pub async fn create(new_user: InternalUser, pool: &PgPool) -> Result<User> {
         let mut tx = pool.begin().await.unwrap();

@@ -1,6 +1,6 @@
 use actix_web_httpauth::extractors::bearer::{BearerAuth, Config};
 use actix_web_httpauth::extractors::AuthenticationError;
-use actix_web::{Error, dev::ServiceRequest};
+use actix_web::{dev::ServiceRequest, Error};
 use jsonwebtoken::errors::ErrorKind;
 use jsonwebtoken::{encode, decode, Header, Algorithm, DecodingKey, Validation, EncodingKey};
 use crate::models::account_model::{LoginResponse};
@@ -40,7 +40,7 @@ pub fn create_jwt(uuid: &Uuid) -> Result<LoginResponse, String> {
    
 }
 
-pub async fn bearer_token_check(req: ServiceRequest, credentials: BearerAuth) -> Result<ServiceRequest, Error> { 
+pub async fn bearer_token_check(req: ServiceRequest, credentials: BearerAuth) -> Result<ServiceRequest, Error> {
     let config = req
         .app_data::<Config>()
         .map(|data| data.clone()) // had to remove the .get_ref() from data to work
@@ -50,7 +50,7 @@ pub async fn bearer_token_check(req: ServiceRequest, credentials: BearerAuth) ->
             if res == true {
                 Ok(req)
             } else {
-                Err(AuthenticationError::from(config).into())
+                Err(AuthenticationError::from(config).into()) 
             }
         }
         Err(_) => Err(AuthenticationError::from(config).into()),
@@ -68,6 +68,8 @@ fn validate_token(token: &str) -> Result<bool, std::io::Error>
         Ok(c) => c,
         Err(err) => match *err.kind() {
             ErrorKind::InvalidToken => panic!("Invalid Token! {:?}", err),
+            ErrorKind::ExpiredSignature => panic!("Invalid Signature {:?}", err),
+            ErrorKind::InvalidSubject => panic!("Invalid Subject {:?}", err),
             _ => panic!("Unknown Error: {:?}", err),
         },
     };

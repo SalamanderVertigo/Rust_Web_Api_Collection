@@ -3,9 +3,9 @@ use crate::models::{User};
 use sqlx::PgPool;
 use uuid::Uuid;
 
-
 #[get("/get-account/{id}")]
-async fn get(db_pool: web::Data<PgPool>, web::Path(id): web::Path<Uuid>) -> impl Responder {
+async fn get(db_pool: web::Data<PgPool>, params: web::Path<Uuid>) -> impl Responder {
+    let id = params.into_inner();
     let result = User::get(db_pool.get_ref(), id).await;
     match result {
         Ok(user) => HttpResponse::Ok().json(user),
