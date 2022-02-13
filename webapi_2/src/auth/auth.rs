@@ -1,12 +1,14 @@
+use actix_web::{dev::ServiceRequest, Error, ResponseError};
+use actix_web::error::ErrorUnauthorized;
 use actix_web_httpauth::extractors::bearer::{BearerAuth, Config};
 use actix_web_httpauth::extractors::AuthenticationError;
-use actix_web::{dev::ServiceRequest, Error};
 use jsonwebtoken::errors::ErrorKind;
 use jsonwebtoken::{encode, decode, Header, Algorithm, DecodingKey, Validation, EncodingKey};
 use crate::models::account_model::{LoginResponse};
 use crate::models::claims_model::{Claims, Role};
 use sqlx::{types::Uuid};
 use chrono::prelude::*;
+use log::error;
 
 // const key: String = env::var("SIGNING_KEY").expect("SECRET not in env file");
 // const u8_key: &[u8] = key.as_bytes();
@@ -33,14 +35,16 @@ pub fn create_jwt(uuid: &Uuid) -> Result<LoginResponse, String> {
     // set up headers!!
     let token = match encode(&header, &claims, &EncodingKey::from_secret(JWT_SECRET)) {
         Ok(t) =>  t,
-        Err(_) => panic!("Error creating the token"), 
+        Err(_) => panic!("Error creating the token"), // actually return an http response error here
     };
     
     Ok(LoginResponse{jwt: token})
    
 }
 
+// TODO Create custom response errors 
 pub async fn bearer_token_check(req: ServiceRequest, credentials: BearerAuth) -> Result<ServiceRequest, Error> {
+    println!("Bearer Token Check");
     let config = req
         .app_data::<Config>()
         .map(|data| data.clone()) // had to remove the .get_ref() from data to work
@@ -50,34 +54,39 @@ pub async fn bearer_token_check(req: ServiceRequest, credentials: BearerAuth) ->
             if res == true {
                 Ok(req)
             } else {
+               /* panic!("PANIC1: {:?}", res);*/
                 Err(AuthenticationError::from(config).into()) 
             }
         }
-        Err(_) => Err(AuthenticationError::from(config).into()),
+        _ => {
+            /*panic!("PANIC2: {:?}", config);*/
+           // Err(_) => Err(AuthenticationError::from(config).into()),
+        }
     }
 }
 
-fn validate_token(token: &str) -> Result<bool, std::io::Error> {
+fn validate_token(token: &str) -> Result<bool, Error> {
     let token_data = match decode::<Claims>(
         &token.to_string(),
         &DecodingKey::from_secret(JWT_SECRET),
         &Validation::new(Algorithm::HS512),
     )
      {
-        Ok(c) => c,
-        Err(err) => match *err.kind() {
-            ErrorKind::InvalidToken => panic!("Invalid Token! {:?}", err),
-            ErrorKind::ExpiredSignature => panic!("Invalid Signature {:?}", err),
-            ErrorKind::InvalidSubject => panic!("Invalid Subject {:?}", err),
-            _ => panic!("Unknown Error: {:?}", err),
+         Ok(claims) => Ok(claims),
+        Err(err) =>  {
+            error!("jwt.decode {} failed: {:?}", token, err);
+            Err(format!("invalid token: {}", err).into())
+            /*ErrorKind::ExpiredSignature => Err(format!("Expired Signature: {}", err).into()),
+            _ => Err(format!("Unknown Error: {}", err).into()),*/
         },
     };
-    println!("TOKEN_DATA_CLAIMS => {:?}", token_data.claims);
-    println!("TOKEN_DATA_HEADER => {:?}", token_data.header);
+    
+   /* println!("TOKEN_DATA_CLAIMS => {:?}", token_data.claims);
+    println!("TOKEN_DATA_HEADER => {:?}", token_data.header);*/
 
     if !token_data.claims.sub.to_string().is_empty()
-    {
+    { 
         return Ok(true);
     }
-    return Err(std::io::Error::new(std::io::ErrorKind::Other, "Authentication failed!"));
+    Err(format!("Authorization Denied:").into())
 }

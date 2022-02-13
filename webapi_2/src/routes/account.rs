@@ -15,10 +15,7 @@ async fn get(db_pool: web::Data<PgPool>, params: web::Path<Uuid>) -> impl Respon
 
 #[get("/account-test")]
 async fn account_test() -> impl Responder {
-    HttpResponse::Ok().body(r#"
-        Account Controllers Test
-    "#
-    )
+    HttpResponse::Ok().body(r#" Account Controllers Test "#)
 }
 
 pub fn account_init(cfg: &mut web::ServiceConfig) {
