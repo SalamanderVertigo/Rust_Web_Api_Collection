@@ -7,6 +7,7 @@ use crate::models::account_model::{LoginResponse};
 use crate::models::claims_model::{Claims, Role};
 use sqlx::{types::Uuid};
 use chrono::prelude::*;
+use log::error;
 
 // const key: String = env::var("SIGNING_KEY").expect("SECRET not in env file");
 // const u8_key: &[u8] = key.as_bytes();
@@ -41,23 +42,30 @@ pub fn create_jwt(uuid: &Uuid) -> Result<LoginResponse, String> {
 }
 
 pub async fn bearer_token_check(req: ServiceRequest, credentials: BearerAuth) -> Result<ServiceRequest, Error> {
+    println!("Bearer Token Check");
     let config = req
         .app_data::<Config>()
         .map(|data| data.clone()) // had to remove the .get_ref() from data to work
         .unwrap_or_else(Default::default);
     match validate_token(credentials.token()) {
         Ok(res) => {
+            println!("Response: {:?}", res);
             if res == true {
                 Ok(req)
             } else {
+                println!("Error captured?");
                 Err(AuthenticationError::from(config).into()) 
             }
         }
-        Err(_) => Err(AuthenticationError::from(config).into()),
+        Err(e) => {
+            println!("Error_ (ln61): {:?}", e);
+            println!("Error_ (ln62): {:?}", config);
+            Err(AuthenticationError::from(config).into())
+        },
     }
 }
 
-fn validate_token(token: &str) -> Result<bool, std::io::Error>
+fn validate_token(token: &str) -> Result<bool, ErrorKind>
 {
     let token_data = match decode::<Claims>(
         &token.to_string(),
@@ -66,11 +74,19 @@ fn validate_token(token: &str) -> Result<bool, std::io::Error>
     )
      {
         Ok(c) => c,
-        Err(err) => match *err.kind() {
-            ErrorKind::InvalidToken => panic!("Invalid Token! {:?}", err),
-            ErrorKind::ExpiredSignature => panic!("Invalid Signature {:?}", err),
-            ErrorKind::InvalidSubject => panic!("Invalid Subject {:?}", err),
-            _ => panic!("Unknown Error: {:?}", err),
+        Err(err) => return match *err.kind() {
+            ErrorKind::InvalidToken => {
+                println!("Error 1 -> {:?}", err);
+                Err(ErrorKind::InvalidToken)
+            },
+            ErrorKind::ExpiredSignature => {
+                println!("Error 2 ->: {:?}", err);
+                Err(ErrorKind::ExpiredSignature)
+            }
+            _ => {
+                println!("Error -> 3: {:?}", err);
+                Err(ErrorKind::InvalidIssuer)
+            }
         },
     };
     println!("TOKEN_DATA_CLAIMS => {:?}", token_data.claims);
@@ -80,5 +96,5 @@ fn validate_token(token: &str) -> Result<bool, std::io::Error>
     {
         return Ok(true);
     }
-    return Err(std::io::Error::new(std::io::ErrorKind::Other, "Authentication failed!"));
+    return Err(ErrorKind::ImmatureSignature);
 }
