@@ -5,6 +5,7 @@ use jsonwebtoken::errors::ErrorKind;
 use jsonwebtoken::{encode, decode, Header, Algorithm, DecodingKey, Validation, EncodingKey};
 use crate::models::account_model::{LoginResponse};
 use crate::models::claims_model::{Claims, Role};
+use crate::models::MyError;
 use sqlx::{types::Uuid};
 use chrono::prelude::*;
 use log::error;
@@ -54,18 +55,18 @@ pub async fn bearer_token_check(req: ServiceRequest, credentials: BearerAuth) ->
                 Ok(req)
             } else {
                 println!("Error captured?");
-                Err(AuthenticationError::from(config).into()) 
+                Err(MyError::AuthenticationDenied.into()) 
             }
         }
-        Err(e) => {
-            println!("Error_ (ln61): {:?}", e);
+        Err(error) => {
+            println!("Error_ (ln61): {:?}", error);
             println!("Error_ (ln62): {:?}", config);
-            Err(AuthenticationError::from(config).into())
+            Err(error.into())
         },
     }
 }
 
-fn validate_token(token: &str) -> Result<bool, ErrorKind>
+fn validate_token(token: &str) -> Result<bool, MyError>
 {
     let token_data = match decode::<Claims>(
         &token.to_string(),
@@ -77,15 +78,15 @@ fn validate_token(token: &str) -> Result<bool, ErrorKind>
         Err(err) => return match *err.kind() {
             ErrorKind::InvalidToken => {
                 println!("Error 1 -> {:?}", err);
-                Err(ErrorKind::InvalidToken)
+                Err(MyError::InvalidToken)
             },
             ErrorKind::ExpiredSignature => {
                 println!("Error 2 ->: {:?}", err);
-                Err(ErrorKind::ExpiredSignature)
+                Err(MyError::ExpiredSignature)
             }
             _ => {
                 println!("Error -> 3: {:?}", err);
-                Err(ErrorKind::InvalidIssuer)
+                Err(MyError::InvalidUser)
             }
         },
     };
@@ -96,5 +97,5 @@ fn validate_token(token: &str) -> Result<bool, ErrorKind>
     {
         return Ok(true);
     }
-    return Err(ErrorKind::ImmatureSignature);
+    return Err(MyError::AuthenticationDenied);
 }
