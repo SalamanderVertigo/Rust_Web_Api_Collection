@@ -1,11 +1,10 @@
 use actix_web_httpauth::extractors::bearer::{BearerAuth, Config};
-use actix_web_httpauth::extractors::AuthenticationError;
 use actix_web::{dev::ServiceRequest, Error};
 use jsonwebtoken::errors::ErrorKind;
 use jsonwebtoken::{encode, decode, Header, Algorithm, DecodingKey, Validation, EncodingKey};
 use crate::models::account_model::{LoginResponse};
 use crate::models::claims_model::{Claims, Role};
-use crate::models::MyError;
+use crate::models::AuthError;
 use sqlx::{types::Uuid};
 use chrono::prelude::*;
 use log::error;
@@ -55,18 +54,17 @@ pub async fn bearer_token_check(req: ServiceRequest, credentials: BearerAuth) ->
                 Ok(req)
             } else {
                 println!("Error captured?");
-                Err(MyError::AuthenticationDenied.into()) 
+                Err(AuthError::AuthenticationDenied.into()) 
             }
         }
         Err(error) => {
             println!("Error_ (ln61): {:?}", error);
-            println!("Error_ (ln62): {:?}", config);
             Err(error.into())
         },
     }
 }
 
-fn validate_token(token: &str) -> Result<bool, MyError>
+fn validate_token(token: &str) -> Result<bool, AuthError>
 {
     let token_data = match decode::<Claims>(
         &token.to_string(),
@@ -77,16 +75,13 @@ fn validate_token(token: &str) -> Result<bool, MyError>
         Ok(c) => c,
         Err(err) => return match *err.kind() {
             ErrorKind::InvalidToken => {
-                println!("Error 1 -> {:?}", err);
-                Err(MyError::InvalidToken)
+                Err(AuthError::InvalidToken("Invalid Token".to_string().into()))
             },
             ErrorKind::ExpiredSignature => {
-                println!("Error 2 ->: {:?}", err);
-                Err(MyError::ExpiredSignature)
+                Err(AuthError::ExpiredSignature("Expired Signature".into()))
             }
             _ => {
-                println!("Error -> 3: {:?}", err);
-                Err(MyError::InvalidUser)
+                Err(AuthError::InvalidUser)
             }
         },
     };
@@ -97,5 +92,5 @@ fn validate_token(token: &str) -> Result<bool, MyError>
     {
         return Ok(true);
     }
-    return Err(MyError::AuthenticationDenied);
+    return Err(AuthError::AuthenticationDenied);
 }

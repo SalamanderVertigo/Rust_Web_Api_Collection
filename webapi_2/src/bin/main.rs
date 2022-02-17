@@ -28,8 +28,8 @@ async fn main() -> Result<()> {
 
     let mut server = HttpServer::new(move || {
         App::new()
+            .app_data(web::Data::new(db_pool.clone()))
             .wrap(middleware::Logger::default())
-            .app_data(db_pool.clone())
             .route("/", web::get().to(index))
             .configure(config_app)
     });

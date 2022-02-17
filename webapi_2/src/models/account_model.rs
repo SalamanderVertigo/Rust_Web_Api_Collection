@@ -73,6 +73,7 @@ impl Responder for LoginRequest {
 // any methods needed for new user structs here (new user omits id as it's generated in the db)
 impl InternalUser {
     pub async fn create(new_user: InternalUser, pool: &PgPool) -> Result<User> {
+        println!("Creating New User!!");
         let mut tx = pool.begin().await.unwrap();
         let password = new_user.password.as_bytes();
         let salt = b"randomsalt";

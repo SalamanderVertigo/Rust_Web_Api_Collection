@@ -5,4 +5,4 @@ pub mod errors;
 
 pub use account_model::{User, LoginRequest, LoginResponse, InternalUser};
 pub use claims_model::{Claims, Role};
-pub use errors::MyError;
+pub use errors::{ServiceError, AuthError};

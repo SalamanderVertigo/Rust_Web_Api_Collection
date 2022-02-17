@@ -5,6 +5,7 @@ use sqlx::PgPool;
 
 #[post("/register")]
 async fn register(new_user: web::Json<InternalUser>, db_pool: web::Data<PgPool>,) -> impl Responder {
+    println!("Registering New User");
     let result = InternalUser::create(new_user.into_inner(), db_pool.get_ref()).await;
     match result {
         Ok(user) => HttpResponse::Ok().json(user),
